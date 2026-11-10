@@ -153,6 +153,12 @@ main.noNav{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 .btn.green{background:var(--ok);color:#fff;border-color:var(--ok)}
 .btn:disabled{opacity:.4;cursor:default}
 .btn.smart{display:flex;align-items:center;gap:12px;border-color:transparent;box-shadow:0 1px 2px rgba(20,35,70,.06);padding:12px 14px}
+.love{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:18px 16px;border-radius:20px;
+  background:linear-gradient(160deg,#ff5f9e,#e0357a);color:#fff;animation:pop .5s cubic-bezier(.2,1.4,.4,1) both}
+.love-t{font-size:22px;font-weight:900}
+.love-m{font-size:18px;font-weight:800;line-height:1.35;text-wrap:balance}
+@keyframes pop{from{transform:scale(.85);opacity:.4}to{transform:none;opacity:1}}
+.confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50}
 .link{color:var(--muted);font-weight:700;font-size:14px;text-decoration:underline;padding:6px;align-self:center}
 
 /* results */
@@ -512,6 +518,24 @@ function askExit(){
     <div class="nav" style="grid-template-columns:1fr 1fr"><button class="btn" id="no">Seguir</button><button class="btn main" id="yes">Salir</button></div>`);
   $('#no').onclick=()=>modal(''); $('#yes').onclick=()=>{ modal(''); go(s.back); };
 }
+function confetti(){
+  if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c=document.createElement('canvas'); c.className='confetti'; document.body.appendChild(c);
+  const x=c.getContext('2d'), dpr=window.devicePixelRatio||1;
+  const W=c.width=innerWidth*dpr, H=c.height=innerHeight*dpr;
+  const cols=['#ff4d8d','#ffb81f','#16a35a','#1d5fd6','#ff6e63','#b26bff'];
+  const P=Array.from({length:140},()=>({x:W/2+(Math.random()-.5)*W*.3, y:H*.35, vx:(Math.random()-.5)*14*dpr, vy:(-Math.random()*14-6)*dpr,
+    s:(6+Math.random()*6)*dpr, r:Math.random()*6, vr:(Math.random()-.5)*.3, c:cols[Math.floor(Math.random()*cols.length)], heart:Math.random()<.3}));
+  const t0=performance.now();
+  (function f(t){
+    const el=t-t0; x.clearRect(0,0,W,H);
+    P.forEach(p=>{ p.vy+=.35*dpr; p.vx*=.99; p.x+=p.vx; p.y+=p.vy; p.r+=p.vr;
+      x.save(); x.translate(p.x,p.y); x.rotate(p.r); x.globalAlpha=Math.max(0,1-el/3500); x.fillStyle=p.c;
+      if(p.heart){ x.font=(p.s*2)+'px sans-serif'; x.fillText('❤',-p.s,p.s); } else x.fillRect(-p.s/2,-p.s/3,p.s,p.s*.66);
+      x.restore(); });
+    if(el<3500) requestAnimationFrame(f); else c.remove();
+  })(t0);
+}
 function finish(timeout){
   stopTimer();
   const s=session; s.done=true;
@@ -525,7 +549,7 @@ function finish(timeout){
   if(s.testId && total===s.list.length) S.best[s.testId] = Math.max(S.best[s.testId]??-1, ok);
   save();
   const passN = s.mode==='exam'? PASS : Math.ceil(total*.8);
-  const pass = ok>=passN;
+  const pass = total>0 && ok>=passN;
   shell(s.title, {back:'close', nav:false}); $('#hback').onclick=()=>go(s.back);
   app.innerHTML = `
     <div class="res ${pass?'ok':'bad'}">
@@ -534,6 +558,7 @@ function finish(timeout){
       <span class="verdict">${s.mode==='exam'?(pass?'Apto':'No apto'):(pass?'¡Aprobado!':'Suspendido')}</span>
       <span class="sub">${s.mode==='exam'?`Necesitas ${PASS} aciertos de ${EXAM_N}`:'Objetivo: 80 % de aciertos'} · ${mmss(secs)}</span>
     </div>
+    ${pass?`<div class="love"><span class="love-t">¡Enhorabuena! 🎉</span><span class="love-m">Erika eres la mejor, Jorge te quiere mucho 😘😘</span></div>`:''}
     <div class="stats3">
       <div class="st ok"><b>${ok}</b><span>aciertos</span></div>
       <div class="st bad"><b>${bad}</b><span>fallos</span></div>
@@ -546,6 +571,7 @@ function finish(timeout){
     <div class="sec">Toca un número para ver la pregunta</div>
     <div class="card"><div class="ngrid">${s.list.map((q,i)=>{const a=s.answers[i]; const c=a===undefined?'':(a===q.a?'ok':'bad'); return `<button class="sn ${c}" data-i="${i}">${i+1}</button>`}).join('')}</div></div>
     <div id="detail" class="stack"></div>`;
+  if(pass) confetti();
   $('#home').onclick=()=>go(s.back);
   $('#again').onclick=()=>{ if(s.mode==='exam'){ if(s.examK){ const nx=EXAMS.find(e=>e.k>s.examK&&!passed(e))||nextExam(); startExam(nx||EXAMS[s.examK%EXAMS.length], s.back); } else startExam(null, s.back); } else start({mode:s.mode, list:(s.testId&&!S.random)?s.list:shuffle(s.list), title:s.title, testId:s.testId, back:s.back}); };
   const showDetail = i=>{ const q=s.list[i], a=s.answers[i];
