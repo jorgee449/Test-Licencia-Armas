@@ -152,6 +152,7 @@ main.noNav{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 .btn.main{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
 .btn.green{background:var(--ok);color:#fff;border-color:var(--ok)}
 .btn:disabled{opacity:.4;cursor:default}
+.btn.smart{display:flex;align-items:center;gap:12px;border-color:transparent;box-shadow:0 1px 2px rgba(20,35,70,.06);padding:12px 14px}
 .link{color:var(--muted);font-weight:700;font-size:14px;text-decoration:underline;padding:6px;align-self:center}
 
 /* results */
@@ -243,6 +244,7 @@ const shuffle = a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor
 const mmss = s=>{s=Math.max(0,Math.round(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
 const fdate = t=>new Date(t).toLocaleDateString('es-ES',{day:'numeric',month:'short'})+' · '+new Date(t).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
 const I = {
+  spark:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/></svg>',
   back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
   close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
@@ -293,8 +295,9 @@ function home(){
       <p>${exams.length? (Math.min(5,exams.length)===1?'Nota de tu último simulacro.':`Nota media de tus últimos ${Math.min(5,exams.length)} simulacros.`):'Haz un simulacro para ver cómo vas. Hasta entonces, el círculo muestra las preguntas que ya aciertas.'}</p></div>
       ${ring(pr, 'preparado', 'var(--sun)')}
     </div>
-    <button class="cta" id="exam">${I.play} ${nx?'Hacer examen '+nx.k:'Examen aleatorio'}</button>
+    <button class="cta" id="exam">${I.play} ${nx?'Hacer examen '+nx.k:'Examen inteligente'}</button>
     <p class="muted" style="text-align:center;margin:-6px 0 0">${nx?`Llevas ${npass} de ${EXAMS.length} exámenes aprobados`:'¡Has aprobado los '+EXAMS.length+' exámenes!'} · ${EXAM_N} preguntas · ${EXAM_MIN} min</p>
+    ${nx?`<button class="btn smart" id="smart"><span class="ic blue" style="width:34px;height:34px;border-radius:10px;display:grid;place-items:center">${I.spark}</span><span style="text-align:left"><b style="display:block">Examen inteligente</b><small class="muted" style="font-size:13px;font-weight:600">Repasa tus fallos y lo que aún no has visto</small></span></button>`:''}
     ${last.length?`<div class="sec">Últimos exámenes</div><div class="last">${last.map(x=>`<div class="pill ${x.ok>=PASS?'ok':'bad'}">${x.ok}/${x.total}<small>${x.ok>=PASS?'APTO':'NO APTO'}</small></div>`).join('')}</div>`:''}
     <div class="grid2">
       <button class="tile" data-go="tests"><span class="ic blue">${I.list}</span><b>Tests</b><span>${EXAMS.length} exámenes y ${TEMAS.length} temas</span></button>
@@ -302,7 +305,8 @@ function home(){
       <button class="tile" id="flags"><span class="ic yellow">${I.flag}</span><b>Marcadas</b><span>${nm? nm+(nm===1?' pregunta':' preguntas'):'Marca las dudosas con la bandera'}</span></button>
       <button class="tile" id="study"><span class="ic green">${I.book}</span><b>Estudiar</b><span>Preguntas con su respuesta y buscador</span></button>
     </div>`;
-  $('#exam').onclick = ()=>startExam(nx);
+  $('#exam').onclick = ()=>startExam(nx||null);
+  const sm=$('#smart'); if(sm) sm.onclick = ()=>startExam(null);
   app.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
   $('#flags').onclick = ()=>{ const m=marcadas(); if(m.length) start({mode:'practice', list:shuffle(m), title:'Preguntas marcadas', back:'home'}); else toast('Aún no has marcado ninguna. Usa la bandera ⚑ durante un test.'); };
   $('#study').onclick = ()=>study('home');
@@ -318,7 +322,7 @@ function tests(){
     <div class="card"><div class="tests" style="padding:0">
       ${EXAMS.map(e=>{const b=S.best[e.id]; const cls=b===undefined?'':(b>=PASS?'ok':'bad');
         return `<button class="tst ${cls}" data-exam="${e.k}"><b>Examen ${e.k}</b><span>${b===undefined?'Sin hacer':b+'/'+EXAM_N}</span></button>`}).join('')}
-      <button class="tst all" id="rndexam"><b>Examen aleatorio</b><span>20 preguntas nuevas cada vez</span></button>
+      <button class="tst all" id="rndexam"><b>Examen inteligente</b><span>Salen más las que fallas y las que no has visto</span></button>
     </div></div>
     <div class="sec">Por temas</div>
     <div class="card stack">
@@ -382,7 +386,7 @@ function progreso(){
       return `<div class="trow"><span class="n">${ROMAN[i]}</span><span class="nm">${esc(name)}</span><span class="p">${Math.round(ok/qs.length*100)}%</span>
         <div class="bar"><i class="g" style="width:${ok/qs.length*100}%"></i><i class="r" style="width:${bad/qs.length*100}%"></i></div></div>`}).join('')}
       <p class="muted" style="margin:0">Verde: acertadas la última vez. Rojo: falladas.</p></div>
-    ${exams.length?`<div class="sec">Historial</div><div class="card">${exams.slice(-15).reverse().map(x=>`<div class="hist"><span>${x.k?'<b>Examen '+x.k+'</b> · ':'<b>Aleatorio</b> · '}${fdate(x.d)}</span><span>${mmss(x.secs)} · <b class="${x.ok>=PASS?'tagok':'tagbad'}">${x.ok}/${x.total}</b></span></div>`).join('')}</div>`:''}
+    ${exams.length?`<div class="sec">Historial</div><div class="card">${exams.slice(-15).reverse().map(x=>`<div class="hist"><span>${x.k?'<b>Examen '+x.k+'</b> · ':'<b>Inteligente</b> · '}${fdate(x.d)}</span><span>${mmss(x.secs)} · <b class="${x.ok>=PASS?'tagok':'tagbad'}">${x.ok}/${x.total}</b></span></div>`).join('')}</div>`:''}
     ${answered?'<button class="link" id="reset">Borrar mi progreso</button>':''}`;
   const r=$('#reset'); if(r) r.onclick=()=>{
     modal(`<h3>¿Borrar todo tu progreso?</h3><p class="muted" style="margin:0">Se borran tus respuestas, fallos, marcadas y el historial de exámenes.</p><div class="nav" style="grid-template-columns:1fr 1fr"><button class="btn" id="no">Cancelar</button><button class="btn main" id="yes" style="background:var(--bad);border-color:var(--bad)">Borrar</button></div>`);
@@ -412,9 +416,32 @@ function study(back){
 }
 
 /* ---------- quiz ---------- */
+/* examen inteligente: reparte por tema como el real y elige con más probabilidad
+   las preguntas falladas, las nunca vistas y las marcadas */
+const QUOTA = {1:3,2:3,3:3,4:4,5:3,6:3,7:1};
+function weight(q){
+  const s = S.stats[q.id]; let w;
+  if(!s) w = 4;                              // nunca vista
+  else if(s.last===0) w = 6 + Math.min(s.w,4); // fallada la última vez
+  else w = Math.max(0.4, 2/(1+s.c));          // acertada: baja con cada acierto
+  if(S.flags[q.id]) w += 2;
+  return w;
+}
+function smartList(){
+  const out = [];
+  for(const t in QUOTA){
+    let pool = Q.filter(q=>q.t===+t).map(q=>({q, w:weight(q)}));
+    for(let k=0;k<QUOTA[t] && pool.length;k++){
+      let r = Math.random()*pool.reduce((a,x)=>a+x.w,0), i=0;
+      while(i<pool.length-1 && (r-=pool[i].w)>0) i++;
+      out.push(pool[i].q); pool.splice(i,1);
+    }
+  }
+  return shuffle(out);
+}
 function startExam(e, back='home'){
   if(e) start({mode:'exam', list:e.ids.map(id=>QBY[id]), title:'Examen '+e.k, testId:e.id, examK:e.k, back, limit:EXAM_MIN*60});
-  else start({mode:'exam', list:shuffle(Q).slice(0,EXAM_N), title:'Examen aleatorio', back, limit:EXAM_MIN*60});
+  else start({mode:'exam', list:smartList(), title:'Examen inteligente', back, limit:EXAM_MIN*60});
 }
 function start(o){
   if(!o.list.length) return go(o.back||'home');
