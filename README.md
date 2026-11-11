@@ -2,7 +2,7 @@
 
 App para preparar el examen teórico de la licencia de armas D y E, con el estilo de las apps del carné de conducir.
 
-- **22 exámenes** como el real: 20 preguntas de los 7 temas, 20 minutos, apruebas con 16 aciertos. Entre todos salen las 423 preguntas.
+- **50 exámenes** como el real: 20 preguntas de los 7 temas, 20 minutos, apruebas con 16 aciertos. Cada pregunta sale en 2 o 3 exámenes.
 - **Examen inteligente**: 20 preguntas repartidas por tema como el real, con más probabilidad de las que fallas, las que no has visto y las marcadas.
 - **Tests por tema** con todas las preguntas de cada tema.
 - **Fallos**, **preguntas marcadas**, **Estudiar** con buscador y **Progreso**.
