@@ -328,7 +328,7 @@ function tests(){
     <div class="card"><div class="tests" style="padding:0">
       ${EXAMS.map(e=>{const b=S.best[e.id]; const cls=b===undefined?'':(b>=PASS?'ok':'bad');
         return `<button class="tst ${cls}" data-exam="${e.k}"><b>Examen ${e.k}</b><span>${b===undefined?'Sin hacer':b+'/'+EXAM_N}</span></button>`}).join('')}
-      <button class="tst all" id="rndexam"><b>Examen inteligente</b><span>Salen más las que fallas y las que no has visto</span></button>
+      <button class="tst all" id="rndexam"><b>Examen inteligente</b><span>Te corrige al momento · salen más las que fallas</span></button>
     </div></div>
     <div class="sec">Por temas</div>
     <div class="card stack">
@@ -447,7 +447,7 @@ function smartList(){
 }
 function startExam(e, back='home'){
   if(e) start({mode:'exam', list:e.ids.map(id=>QBY[id]), title:'Examen '+e.k, testId:e.id, examK:e.k, back, limit:EXAM_MIN*60});
-  else start({mode:'exam', list:smartList(), title:'Examen inteligente', back, limit:EXAM_MIN*60});
+  else start({mode:'exam', list:smartList(), title:'Examen inteligente', back, limit:EXAM_MIN*60, fix:true});
 }
 function start(o){
   if(!o.list.length) return go(o.back||'home');
@@ -462,7 +462,7 @@ function tick(){
   const el=$('#tval'); if(el){ el.textContent = mmss(left); $('#timer').classList.toggle('low', left<120); }
   if(left<=0){ stopTimer(); finish(true); }
 }
-const instant = s=>s.mode==='practice';
+const instant = s=>s.mode==='practice' || !!s.fix;
 function showQ(){
   const s=session, q=s.list[s.i], ans=s.answers[s.i], answered = ans!==undefined, reveal = answered && instant(s);
   shell(s.title, {back:'close', timer:!!s.limit, nav:false}); if(s.limit) tick();
@@ -514,7 +514,7 @@ function askFinish(){
 }
 function askExit(){
   const s=session; if(!s.answers.some(a=>a!==undefined)) return go(s.back);
-  modal(`<h3>¿Salir ${s.mode==='exam'?'del examen':'del test'}?</h3><p class="muted" style="margin:0">${s.mode==='practice'?'Tus respuestas ya se han guardado en tus estadísticas.':'Perderás las respuestas de este intento.'}</p>
+  modal(`<h3>¿Salir ${s.mode==='exam'?'del examen':'del test'}?</h3><p class="muted" style="margin:0">${instant(s)?'Tus respuestas ya se han guardado en tus estadísticas.':'Perderás las respuestas de este intento.'}</p>
     <div class="nav" style="grid-template-columns:1fr 1fr"><button class="btn" id="no">Seguir</button><button class="btn main" id="yes">Salir</button></div>`);
   $('#no').onclick=()=>modal(''); $('#yes').onclick=()=>{ modal(''); go(s.back); };
 }
