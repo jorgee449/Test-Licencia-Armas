@@ -395,10 +395,74 @@ function progreso(){
         <div class="bar"><i class="g" style="width:${ok/qs.length*100}%"></i><i class="r" style="width:${bad/qs.length*100}%"></i></div></div>`}).join('')}
       <p class="muted" style="margin:0">Verde: acertadas la última vez. Rojo: falladas.</p></div>
     ${exams.length?`<div class="sec">Historial</div><div class="card">${exams.slice(-15).reverse().map(x=>`<div class="hist"><span>${x.k?'<b>Examen '+x.k+'</b> · ':'<b>Inteligente</b> · '}${fdate(x.d)}</span><span>${mmss(x.secs)} · <b class="${x.ok>=PASS?'tagok':'tagbad'}">${x.ok}/${x.total}</b></span></div>`).join('')}</div>`:''}
+    <div class="sec">Copia de seguridad</div>
+    <div class="card stack">
+      <p class="muted" style="margin:0">Guarda tu progreso en un texto y recupéralo en otro móvil, o en la app del icono si antes la usabas en Safari.</p>
+      <div class="nav" style="grid-template-columns:1fr 1fr">
+        <button class="btn main" id="bkSave">Guardar copia</button>
+        <button class="btn" id="bkLoad">Recuperar copia</button>
+      </div>
+      <div id="bkBox" class="stack"></div>
+    </div>
     ${answered?'<button class="link" id="reset">Borrar mi progreso</button>':''}`;
+  $('#bkSave').onclick = backupSave;
+  $('#bkLoad').onclick = backupLoad;
   const r=$('#reset'); if(r) r.onclick=()=>{
     modal(`<h3>¿Borrar todo tu progreso?</h3><p class="muted" style="margin:0">Se borran tus respuestas, fallos, marcadas y el historial de exámenes.</p><div class="nav" style="grid-template-columns:1fr 1fr"><button class="btn" id="no">Cancelar</button><button class="btn main" id="yes" style="background:var(--bad);border-color:var(--bad)">Borrar</button></div>`);
     $('#no').onclick=()=>modal(''); $('#yes').onclick=()=>{ S={stats:{},flags:{},best:{},hist:[],instant:S.instant,random:S.random,examFix:S.examFix}; save(); modal(''); progreso(); };
+  };
+}
+
+/* ---------- copia de seguridad ---------- */
+const BK = 'TESTARMAS1:';
+function backupCode(){
+  const o = {s:{}, f:Object.keys(S.flags), b:S.best, h:S.hist.map(x=>[x.d,x.ok,x.total,x.secs,x.k||0]), o:[S.instant?1:0, S.random?1:0, S.examFix?1:0]};
+  for(const id in S.stats){ const x=S.stats[id]; o.s[id]=[x.c,x.w,x.last]; }
+  return BK + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+}
+function backupSave(){
+  const code = backupCode();
+  const n = Object.keys(S.stats).length;
+  $('#bkBox').innerHTML = `
+    <textarea id="bkText" readonly rows="4" style="width:100%;font:12px/1.4 ui-monospace,monospace;padding:10px;border-radius:12px;border:2px solid var(--line);background:var(--soft);color:var(--fg);word-break:break-all">${code}</textarea>
+    <div class="nav" style="grid-template-columns:1fr 1fr">
+      <button class="btn green" id="bkCopy">Copiar</button>
+      <button class="btn" id="bkShare">Enviar…</button>
+    </div>
+    <p class="muted" style="margin:0" id="bkMsg">Incluye ${n} preguntas respondidas, ${S.hist.length} ${S.hist.length===1?'examen':'exámenes'} y tus marcadas. Cópialo y guárdalo en Notas o mándatelo por WhatsApp.</p>`;
+  $('#bkCopy').onclick = ()=>{
+    const ta=$('#bkText');
+    const done = ok=>{ $('#bkMsg').innerHTML = ok?'<b class="tagok">Copiado.</b> Ahora pégalo en Notas o WhatsApp para guardarlo.':'Mantén pulsado el texto, elige <b>Seleccionar todo</b> y luego <b>Copiar</b>.'; };
+    try{ navigator.clipboard.writeText(code).then(()=>done(true), ()=>{ ta.focus(); ta.select(); done(false); }); }
+    catch(e){ ta.focus(); ta.select(); done(false); }
+  };
+  const sh=$('#bkShare');
+  if(navigator.share) sh.onclick = ()=>navigator.share({title:'Copia Test Armas', text:code}).catch(()=>{});
+  else sh.hidden = true, sh.parentElement.style.gridTemplateColumns='1fr';
+}
+function backupLoad(){
+  $('#bkBox').innerHTML = `
+    <textarea id="bkIn" rows="4" placeholder="Pega aquí el texto de tu copia (empieza por ${BK})" style="width:100%;font:12px/1.4 ui-monospace,monospace;padding:10px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--fg);word-break:break-all"></textarea>
+    <button class="btn green" id="bkApply">Recuperar progreso</button>
+    <p class="muted" style="margin:0" id="bkMsg">Se junta con lo que ya tengas en este móvil; no se borra nada.</p>`;
+  $('#bkApply').onclick = ()=>{
+    const txt = $('#bkIn').value.replace(/\s+/g,'');
+    const i = txt.indexOf(BK);
+    let o;
+    try{ if(i<0) throw 0; o = JSON.parse(decodeURIComponent(escape(atob(txt.slice(i+BK.length))))); if(!o||typeof o.s!=='object') throw 0; }
+    catch(e){ $('#bkMsg').innerHTML = '<b class="tagbad">Ese texto no es una copia válida.</b> Copia el texto entero, desde TESTARMAS1: hasta el final.'; return; }
+    let nq=0;
+    for(const id in o.s){ if(!QBY[id]) continue; const [c,w,last]=o.s[id], cur=S.stats[id];
+      if(!cur || (c+w) > (cur.c+cur.w)){ S.stats[id]={c,w,last}; nq++; } }
+    (o.f||[]).forEach(id=>{ if(QBY[id]) S.flags[id]=1; });
+    for(const id in (o.b||{})) S.best[id] = Math.max(S.best[id]??-1, o.b[id]);
+    const have = new Set(S.hist.map(x=>x.d));
+    (o.h||[]).forEach(([d,ok,total,secs,k])=>{ if(!have.has(d)) S.hist.push({d,ok,total,secs,mode:'exam',k}); });
+    S.hist.sort((a,b)=>a.d-b.d);
+    save();
+    progreso();
+    modal(`<h3>Progreso recuperado</h3><p class="muted" style="margin:0">Se han recuperado ${nq} preguntas, tus marcadas y ${(o.h||[]).length} ${(o.h||[]).length===1?'examen':'exámenes'}.</p><button class="btn main" id="mok">Perfecto</button>`);
+    $('#mok').onclick=()=>modal('');
   };
 }
 
