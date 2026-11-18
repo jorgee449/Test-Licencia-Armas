@@ -498,7 +498,12 @@ function showQ(){
   app.querySelectorAll('#strip .sn').forEach(b=>b.onclick=()=>{ s.i=+b.dataset.i; showQ(); });
   app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
     const k=+b.dataset.k; s.answers[s.i]=k;
-    if(instant(s)){ record(q,k===q.a); save(); showQ(); }
+    if(instant(s)){
+      record(q,k===q.a); save(); showQ();
+      // si acierta, pasa sola a la siguiente; si falla, se para para ver la corrección
+      const idx = s.i;
+      if(k===q.a && !last) setTimeout(()=>{ if(session===s && s.i===idx && !$('.sheet')){ s.i++; showQ(); } }, 700);
+    }
     else { showQ(); if(!last) setTimeout(()=>{ if(session===s && s.answers[s.i]===k){ s.i++; showQ(); } }, 280); }
   });
   $('#flag').onclick=()=>{ if(S.flags[q.id]) delete S.flags[q.id]; else S.flags[q.id]=1; save(); showQ(); };

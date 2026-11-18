@@ -1,6 +1,6 @@
 // Guarda la app para que funcione sin internet.
 // Sube el número de versión cuando cambies index.html para que los móviles descarguen la nueva.
-const CACHE = 'test-armas-v6';
+const CACHE = 'test-armas-v7';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
