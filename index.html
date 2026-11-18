@@ -234,7 +234,7 @@ const L = ['A','B','C'];
 const KEY = 'licarmas-v2';
 
 /* ---------- storage ---------- */
-let S = {stats:{}, flags:{}, best:{}, hist:[], instant:true, random:false};
+let S = {stats:{}, flags:{}, best:{}, hist:[], instant:true, random:false, examFix:false};
 try{ const old = JSON.parse(localStorage.getItem('licarmas-v1')||'null'); if(old) S.stats = old; }catch(e){}
 try{ const v = JSON.parse(localStorage.getItem(KEY)||'null'); if(v) S = Object.assign(S, v); }catch(e){}
 const save = ()=>{ try{ localStorage.setItem(KEY, JSON.stringify(S)) }catch(e){} };
@@ -325,6 +325,7 @@ function tests(){
   app.innerHTML = `
     <div class="sec">Exámenes · ${npass} de ${EXAMS.length} aprobados</div>
     <p class="muted" style="margin:-8px 4px 0">Como el examen real: ${EXAM_N} preguntas de los 7 temas, ${EXAM_MIN} minutos, apruebas con ${PASS}. Entre todos salen las ${Q.length} preguntas.</p>
+    <div class="card switch"><div><label for="exfix">Corregir exámenes al momento</label><small>Si lo desactivas, ves la nota al final, como en el examen real</small></div><input type="checkbox" id="exfix" ${S.examFix?'checked':''}></div>
     <div class="card"><div class="tests" style="padding:0">
       ${EXAMS.map(e=>{const b=S.best[e.id]; const cls=b===undefined?'':(b>=PASS?'ok':'bad');
         return `<button class="tst ${cls}" data-exam="${e.k}"><b>Examen ${e.k}</b><span>${b===undefined?'Sin hacer':b+'/'+EXAM_N}</span></button>`}).join('')}
@@ -346,6 +347,7 @@ function tests(){
         <span class="tema-go">${I.play}</span></button>`}).join('')}`;
   app.querySelectorAll('[data-exam]').forEach(b=>b.onclick=()=>startExam(EXAMS[+b.dataset.exam-1], 'tests'));
   $('#rndexam').onclick=()=>startExam(null,'tests');
+  $('#exfix').onchange = e=>{ S.examFix = e.target.checked; save(); };
   $('#inst').onchange = e=>{ S.instant = e.target.checked; save(); };
   $('#rnd').onchange = e=>{ S.random = e.target.checked; save(); };
   app.querySelectorAll('.tema[data-t]').forEach(b=>b.onclick=()=>{ const t=+b.dataset.t, qs=Q.filter(q=>q.t===t);
@@ -396,7 +398,7 @@ function progreso(){
     ${answered?'<button class="link" id="reset">Borrar mi progreso</button>':''}`;
   const r=$('#reset'); if(r) r.onclick=()=>{
     modal(`<h3>¿Borrar todo tu progreso?</h3><p class="muted" style="margin:0">Se borran tus respuestas, fallos, marcadas y el historial de exámenes.</p><div class="nav" style="grid-template-columns:1fr 1fr"><button class="btn" id="no">Cancelar</button><button class="btn main" id="yes" style="background:var(--bad);border-color:var(--bad)">Borrar</button></div>`);
-    $('#no').onclick=()=>modal(''); $('#yes').onclick=()=>{ S={stats:{},flags:{},best:{},hist:[],instant:S.instant,random:S.random}; save(); modal(''); progreso(); };
+    $('#no').onclick=()=>modal(''); $('#yes').onclick=()=>{ S={stats:{},flags:{},best:{},hist:[],instant:S.instant,random:S.random,examFix:S.examFix}; save(); modal(''); progreso(); };
   };
 }
 
@@ -446,7 +448,7 @@ function smartList(){
   return shuffle(out);
 }
 function startExam(e, back='home'){
-  if(e) start({mode:'exam', list:e.ids.map(id=>QBY[id]), title:'Examen '+e.k, testId:e.id, examK:e.k, back, limit:EXAM_MIN*60});
+  if(e) start({mode:'exam', list:e.ids.map(id=>QBY[id]), title:'Examen '+e.k, testId:e.id, examK:e.k, back, limit:EXAM_MIN*60, fix:!!S.examFix});
   else start({mode:'exam', list:smartList(), title:'Examen inteligente', back, limit:EXAM_MIN*60, fix:true});
 }
 function start(o){
